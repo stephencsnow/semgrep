@@ -237,20 +237,17 @@ and call_special =
   | ForeachNext
   | ForeachHasNext
 
-(* primitives called under the hood *)
-
-(* | IntAccess of composite_kind * int (* for tuples/array/list *)
-   | StringAccess of string (* for records/hashes *)
-*)
+(* THINK: We could perform "lambda lifting" here to avoid having anonymous
+ * lambdas and classes, they would instead be named and defined at the
+ * top level. But then we will loose the local context unless we run an
+ * inter-procedural dataflow analysis. *)
 and anonymous_entity =
-  | Lambda of G.function_definition
+  | Lambda of function_definition
   | AnonClass of G.class_definition
-[@@deriving show { with_path = false }]
 
 (*****************************************************************************)
 (* Statement *)
-(*****************************************************************************)
-type stmt = { s : stmt_kind (* sorig: G.stmt; ?*) }
+and stmt = { s : stmt_kind (* sorig: G.stmt; ?*) }
 
 and stmt_kind =
   | Instr of instr
@@ -277,12 +274,40 @@ and other_stmt =
   | DirectiveStmt of G.directive
   | Noop
 
-and label = ident * G.sid [@@deriving show { with_path = false }]
+and label = ident * G.sid
 
 (*****************************************************************************)
 (* Defs *)
 (*****************************************************************************)
-(* See AST_generic.ml *)
+and parameter = Param of name * G.type_ option | FixmeParam of G.parameter
+
+and parameters = parameter list
+
+and function_definition = {
+  fparams : parameters;
+  frettype : G.type_ option;
+  (* TODO: local VarDefs *)
+  fbody : stmt list;
+}
+[@@deriving show { with_path = false }]
+
+let names_of_parameters params =
+  params
+  |> List.filter_map (function
+       | Param (name, _) -> Some name
+       | FixmeParam _ -> None)
+
+(*****************************************************************************)
+(* Program *)
+(*****************************************************************************)
+
+type top =
+  | Stmts of stmt list
+  | FunDef of name * function_definition
+  | FixmeTop of G.stmt
+[@@deriving show { with_path = false }]
+
+type program = top list
 
 (*****************************************************************************)
 (* Control-flow graph (CFG) *)

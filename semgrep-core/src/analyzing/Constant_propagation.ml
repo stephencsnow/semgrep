@@ -419,8 +419,9 @@ let propagate_dataflow lang ast =
         V.default_visitor with
         V.kfunction_definition =
           (fun (_k, _) def ->
-            let inputs, xs = AST_to_IL.function_definition lang def in
-            let flow = CFG_build.cfg_of_stmts xs in
+            let def = AST_to_IL.function_definition lang def in
+            let inputs = IL.names_of_parameters def.fparams in
+            let flow = CFG_build.cfg_of_stmts def.fbody in
             let mapping = Dataflow_constness.fixpoint inputs flow in
             Dataflow_constness.update_constness flow mapping);
       }

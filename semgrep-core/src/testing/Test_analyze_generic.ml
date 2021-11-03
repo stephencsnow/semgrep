@@ -139,15 +139,18 @@ let test_dfg_constness file =
       {
         V.default_visitor with
         V.kfunction_definition =
-          (fun (_k, _) def ->
-            let inputs, xs = AST_to_IL.function_definition lang def in
-            let flow = CFG_build.cfg_of_stmts xs in
+          (fun (_k, _) deforig ->
+            let def = AST_to_IL.function_definition lang deforig in
+            let inputs = IL.names_of_parameters def.IL.fparams in
+            let flow = CFG_build.cfg_of_stmts def.IL.fbody in
             pr2 "Constness";
             let mapping = Dataflow_constness.fixpoint inputs flow in
             Dataflow_constness.update_constness flow mapping;
             DataflowY.display_mapping flow mapping
               Dataflow_constness.string_of_constness;
-            let s = AST_generic.show_any (S (H.funcbody_to_stmt def.fbody)) in
+            let s =
+              AST_generic.show_any (S (H.funcbody_to_stmt deforig.fbody))
+            in
             pr2 s);
       }
   in

@@ -210,6 +210,36 @@ let composite_of_container : G.container_operator -> IL.composite_kind =
   | Dict -> CDict
 
 (*****************************************************************************)
+(* break/continue/switch helpers *)
+(*****************************************************************************)
+
+(* TODO: What other languages have no fallthrough? *)
+let no_switch_fallthrough : Lang.t -> bool = function
+  | Go -> true
+  | _ -> false
+
+let mk_break_continue_labels env tok =
+  let cont_label = fresh_label env tok in
+  let break_label = fresh_label env tok in
+  let st_env =
+    {
+      env with
+      break_labels = break_label :: env.break_labels;
+      cont_label = Some cont_label;
+    }
+  in
+  let cont_label_s = [ mk_s (Label cont_label) ] in
+  let break_label_s = [ mk_s (Label break_label) ] in
+  (cont_label_s, break_label_s, st_env)
+
+let mk_switch_break_label env tok =
+  let break_label = fresh_label env tok in
+  let switch_env =
+    { env with break_labels = break_label :: env.break_labels }
+  in
+  (break_label, [ mk_s (Label break_label) ], switch_env)
+
+(*****************************************************************************)
 (* lvalue *)
 (*****************************************************************************)
 let rec lval env eorig =
@@ -511,6 +541,7 @@ and expr_aux env ?(void = false) eorig =
       (* TODO: we should have a use def.f_tok *)
       let tok = G.fake "lambda" in
       let lval = fresh_lval env tok in
+      let def = function_definition env def in
       add_instr env (mk_i (AssignAnon (lval, Lambda def)) eorig);
       mk_e (Fetch lval) eorig
   | G.AnonClass def ->
@@ -686,8 +717,7 @@ and record env ((_tok, origfields, _) as record_def) =
 (*****************************************************************************)
 (* Exprs and instrs *)
 (*****************************************************************************)
-
-let lval_of_ent env ent =
+and lval_of_ent env ent =
   match ent.G.name with
   | G.EN (G.Id (id, idinfo)) -> lval_of_id_info env id idinfo
   | G.EN name -> lval env (G.N name |> G.e)
@@ -708,19 +738,16 @@ let lval_of_ent env ent =
       | x :: _ -> fresh_lval env x)
 
 (* just to ensure the code after does not call expr directly *)
-let expr_orig = expr
+and expr_orig env ?void e = expr env ?void e
 
-let expr () = ()
-
-let expr_with_pre_stmts env ?void e =
-  ignore (expr ());
+and expr_with_pre_stmts env ?void e =
   let e = expr_orig env ?void e in
   let xs = List.rev !(env.stmts) in
   env.stmts := [];
   (xs, e)
 
 (* alt: could use H.cond_to_expr and reuse expr_with_pre_stmts *)
-let cond_with_pre_stmts env ?void cond =
+and cond_with_pre_stmts env ?void cond =
   match cond with
   | G.Cond e ->
       let e = expr_orig env ?void e in
@@ -735,18 +762,18 @@ let cond_with_pre_stmts env ?void cond =
       env.stmts := [];
       (xs, e)
 
-let args_with_pre_stmts env args =
+and args_with_pre_stmts env args =
   let args = arguments env args in
   let xs = List.rev !(env.stmts) in
   env.stmts := [];
   (xs, args)
 
-let expr_with_pre_stmts_opt env eopt =
+and expr_with_pre_stmts_opt env eopt =
   match eopt with
   | None -> ([], expr_opt env None)
   | Some e -> expr_with_pre_stmts env e
 
-let for_var_or_expr_list env xs =
+and for_var_or_expr_list env xs =
   xs
   |> List.map (function
        | G.ForInitExpr e ->
@@ -763,46 +790,9 @@ let for_var_or_expr_list env xs =
   |> List.flatten
 
 (*****************************************************************************)
-(* Parameters *)
-(*****************************************************************************)
-
-let parameters _env params =
-  params
-  |> List.filter_map (function
-       | G.Param { pname = Some i; pinfo; _ } -> Some (var_of_id_info i pinfo)
-       | ___else___ -> None (* TODO *))
-
-(*****************************************************************************)
 (* Statement *)
 (*****************************************************************************)
-
-(* TODO: What other languages have no fallthrough? *)
-let no_switch_fallthrough : Lang.t -> bool = function
-  | Go -> true
-  | _ -> false
-
-let mk_break_continue_labels env tok =
-  let cont_label = fresh_label env tok in
-  let break_label = fresh_label env tok in
-  let st_env =
-    {
-      env with
-      break_labels = break_label :: env.break_labels;
-      cont_label = Some cont_label;
-    }
-  in
-  let cont_label_s = [ mk_s (Label cont_label) ] in
-  let break_label_s = [ mk_s (Label break_label) ] in
-  (cont_label_s, break_label_s, st_env)
-
-let mk_switch_break_label env tok =
-  let break_label = fresh_label env tok in
-  let switch_env =
-    { env with break_labels = break_label :: env.break_labels }
-  in
-  (break_label, [ mk_s (Label break_label) ], switch_env)
-
-let rec stmt_aux env st =
+and stmt_aux env st =
   match st.G.s with
   | G.ExprStmt (e, _) ->
       (* optimize? pass context to expr when no need for return value? *)
@@ -1139,8 +1129,6 @@ and stmt env st =
   try stmt_aux env st
   with Fixme (kind, any_generic) -> fixme_stmt kind any_generic
 
-and function_body env fbody = stmt env (H.funcbody_to_stmt fbody)
-
 (*
  *     with MANAGER as PAT:
  *         BODY
@@ -1223,14 +1211,57 @@ and python_with_stmt env manager opt_pat body =
   pre_try_stmts @ [ mk_s (Try (try_body, try_catches, try_finally)) ]
 
 (*****************************************************************************)
+(* Function definition *)
+(*****************************************************************************)
+and parameters _env params =
+  params
+  |> Common.map (function
+       | G.Param { pname = Some i; ptype; pinfo; _ } ->
+           let name = var_of_id_info i pinfo in
+           Param (name, ptype)
+       | param -> FixmeParam param)
+
+and function_body env fbody = stmt env (H.funcbody_to_stmt fbody)
+
+and function_definition env def =
+  let fparams = parameters env def.G.fparams in
+  let frettype = def.G.frettype in
+  let fbody = function_body env def.G.fbody in
+  { fparams; frettype; fbody }
+
+(*****************************************************************************)
+(* Program *)
+(*****************************************************************************)
+
+let top env st =
+  match st.G.s with
+  | G.DefStmt ({ G.name = G.EN (G.Id (id, id_info)); _ }, FuncDef def) ->
+      let fname = var_of_id_info id id_info in
+      let def = function_definition env def in
+      FunDef (fname, def)
+  | G.DefStmt _ -> FixmeTop st
+  | _ -> Stmts (stmt env st)
+
+let program env pr =
+  List.fold_left
+    (fun rev_pr st ->
+      match (rev_pr, top env st) with
+      | Stmts ss1 :: rev_pr, Stmts ss2 -> Stmts (ss1 @ ss2) :: rev_pr
+      | rev_pr, top -> top :: rev_pr)
+    [] pr
+  |> List.rev
+
+(*****************************************************************************)
 (* Entry points *)
 (*****************************************************************************)
 
+let program lang pr =
+  let env = empty_env lang in
+  program env pr
+
 let function_definition lang def =
   let env = empty_env lang in
-  let params = parameters env def.G.fparams in
-  let body = function_body env def.G.fbody in
-  (params, body)
+  function_definition env def
 
 let stmt lang st =
   let env = empty_env lang in
