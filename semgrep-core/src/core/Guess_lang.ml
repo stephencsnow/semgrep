@@ -41,6 +41,13 @@ let has_suffix suffixes =
   in
   Test_path f
 
+let is_named valid_names =
+  let f path =
+    let name = Filename.basename path in
+    List.mem name valid_names
+  in
+  Test_path f
+
 let prepend_period_if_needed s =
   match s with
   | "" -> "."
@@ -219,6 +226,8 @@ let inspect_file_p (lang : Lang.t) path =
     | C -> has_lang_extension lang
     | Cplusplus -> has_lang_extension lang
     | Csharp -> has_lang_extension lang
+    | Dockerfile ->
+        Or (is_named [ "Dockerfile"; "dockerfile" ], has_lang_extension lang)
     | Go -> has_lang_extension lang
     | HTML -> has_lang_extension lang
     | Hack -> is_hack

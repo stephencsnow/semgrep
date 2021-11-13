@@ -26,6 +26,7 @@ let lang_has_no_dollar_ids =
     | PHP
     | Hack
     | Bash
+    | Dockerfile
     | Rust
     | Scala ->
         false)

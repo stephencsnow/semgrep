@@ -92,6 +92,7 @@ let print_bool env = function
       | Lang.Kotlin
       | Lang.Lua
       | Lang.Bash
+      | Lang.Dockerfile
       | Lang.Rust
       | Lang.Scala
       | Lang.HTML
@@ -121,6 +122,7 @@ let print_bool env = function
       | Lang.Kotlin
       | Lang.Lua
       | Lang.Bash
+      | Lang.Dockerfile
       | Lang.Rust
       | Lang.Scala
       | Lang.HTML
@@ -221,6 +223,7 @@ and if_stmt env level (tok, e, s, sopt) =
   let format_cond, elseif_str, format_block =
     match env.lang with
     | Lang.Bash
+    | Lang.Dockerfile
     | Lang.Ruby
     | Lang.OCaml
     | Lang.Scala
@@ -278,6 +281,7 @@ and while_stmt env level (tok, e, s) =
   let while_format =
     match env.lang with
     | Lang.Bash
+    | Lang.Dockerfile
     | Lang.PHP
     | Lang.Hack
     | Lang.Lua
@@ -313,6 +317,7 @@ and do_while stmt env level (s, e) =
   let do_while_format =
     match env.lang with
     | Lang.Bash
+    | Lang.Dockerfile
     | Lang.PHP
     | Lang.Hack
     | Lang.Lua
@@ -347,6 +352,7 @@ and for_stmt env level (for_tok, hdr, s) =
   let for_format =
     match env.lang with
     | Lang.Bash
+    | Lang.Dockerfile
     | Lang.PHP
     | Lang.HTML
     | Lang.Hack
@@ -410,6 +416,7 @@ and def_stmt env (entity, def_kind) =
     let no_val, with_val =
       match env.lang with
       | Lang.Bash
+      | Lang.Dockerfile
       | Lang.PHP
       | Lang.Hack
       | Lang.Lua
@@ -473,6 +480,7 @@ and return env (tok, eopt) _sc =
   in
   match env.lang with
   | Lang.Bash
+  | Lang.Dockerfile
   | Lang.PHP
   | Lang.Hack
   | Lang.Yaml
@@ -511,6 +519,7 @@ and break env (tok, lbl) _sc =
   in
   match env.lang with
   | Lang.Bash
+  | Lang.Dockerfile
   | Lang.PHP
   | Lang.Hack
   | Lang.Yaml
@@ -549,6 +558,7 @@ and continue env (tok, lbl) _sc =
   in
   match env.lang with
   | Lang.Bash
+  | Lang.Dockerfile
   | Lang.PHP
   | Lang.Hack
   | Lang.Yaml
@@ -657,6 +667,7 @@ and literal env l =
   | String (s, _) -> (
       match env.lang with
       | Lang.Bash
+      | Lang.Dockerfile
       | Lang.PHP
       | Lang.Hack
       | Lang.Yaml

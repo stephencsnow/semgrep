@@ -27,6 +27,7 @@ type t =
   | Lua
   (* shells *)
   | Bash
+  | Dockerfile
   (* data science *)
   | R
   (* config files *)

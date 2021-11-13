@@ -55,6 +55,7 @@ type t =
   | Lua
   (* shells *)
   | Bash
+  | Dockerfile
   (* data science *)
   | R
   (* config files *)
@@ -115,8 +116,10 @@ let assoc =
     ("kotlin", Kotlin);
     ("lua", Lua);
     ("bash", Bash);
-    ("sh", Bash);
     (* sh is not bash, but we are treating them as the same language for now *)
+    ("sh", Bash);
+    ("dockerfile", Dockerfile);
+    ("df", Dockerfile);
     ("rs", Rust);
     ("rust", Rust);
     ("r", R);
@@ -161,6 +164,7 @@ let langs_of_filename filename =
   | FT.PL FT.Kotlin -> [ Kotlin ]
   | FT.PL FT.Lua -> [ Lua ]
   | FT.PL (FT.Script "bash") -> [ Bash ]
+  | FT.PL (FT.Script "dockerfile") -> [ Dockerfile ]
   | FT.PL FT.Rust -> [ Rust ]
   | FT.PL FT.R -> [ R ]
   | FT.PL FT.Scala -> [ Scala ]
@@ -187,6 +191,7 @@ let to_string = function
   | Kotlin -> "Kotlin"
   | Lua -> "Lua"
   | Bash -> "Bash"
+  | Dockerfile -> "Dockerfile"
   | Rust -> "Rust"
   | R -> "R"
   | Yaml -> "Yaml"
@@ -202,6 +207,7 @@ let to_lowercase_alnum = function
   | C -> "c"
   | Cplusplus -> "cpp"
   | Csharp -> "csharp"
+  | Dockerfile -> "dockerfile"
   | Go -> "go"
   | Hack -> "hack"
   | JSON -> "json"
@@ -249,6 +255,10 @@ let ext_of_lang = function
   | Kotlin -> [ "kt" ]
   | Lua -> [ "lua" ]
   | Bash -> [ "bash"; "sh" ]
+  | Dockerfile ->
+      (* Those extensions are made-up.
+         The only standard name is 'Dockerfile' without an extension. *)
+      [ "Dockerfile"; "dockerfile"; "df" ]
   | Rust -> [ "rs" ]
   | R -> [ "r"; "R" ]
   | Yaml -> [ "yaml"; "yml" ]
