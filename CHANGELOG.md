@@ -4,6 +4,11 @@ This project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html
 
 ## Unreleased
 
+### Fixed
+- taint-mode: Findings are now reported when the LHS of an access operator is
+  a sink (e.g. as in `$SINK->method`), and the LHS operand is a tainted
+  variable (#4320)
+
 ## [0.74.0](https://github.com/returntocorp/semgrep/releases/tag/v0.74.0) - 11-19-2021
 
 ### Added
