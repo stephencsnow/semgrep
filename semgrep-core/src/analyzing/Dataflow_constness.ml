@@ -54,8 +54,22 @@ let string_of_ctype = function
   | G.Cstr -> "str"
   | G.Cany -> "???"
 
+(* Pretty_print_generic *)
+let rec string_of_sym expr =
+  match expr.G.e with
+  | G.N name -> string_of_name name
+  | G.DotAccess (e, _, FN name) -> string_of_sym e ^ "." ^ string_of_name name
+  | G.Call (e, (_, _args, _)) -> string_of_sym e ^ "(" ^ "..." ^ ")"
+  | _ -> "<expr>"
+
+and string_of_name name =
+  match name with
+  | G.Id (id, _) -> fst id
+  | _ -> "<id>"
+
 let string_of_constness = function
-  | G.NotCst -> "dyn"
+  | G.NotCst -> "top"
+  | G.Sym e -> Printf.sprintf "sym(%s)" (string_of_sym e)
   | G.Cst t -> Printf.sprintf "cst(%s)" (string_of_ctype t)
   | G.Lit l -> (
       match l with
@@ -84,14 +98,21 @@ let eq c1 c2 =
   match (c1, c2) with
   | G.Lit l1, G.Lit l2 -> eq_literal l1 l2
   | G.Cst t1, G.Cst t2 -> eq_ctype t1 t2
+  | G.Sym e1, G.Sym e2 -> AST_utils.with_structural_equal G.equal_expr e1 e2
   | G.NotCst, G.NotCst -> true
-  | ___else___ -> false
+  | G.Lit _, _
+  | G.Cst _, _
+  | G.Sym _, _
+  | G.NotCst, _ ->
+      false
 
 let union_ctype t1 t2 = if eq_ctype t1 t2 then t1 else G.Cany
 
 let union c1 c2 =
   match (c1, c2) with
   | _ when eq c1 c2 -> c1
+  | _any, G.Sym _
+  | G.Sym _, _any
   | _any, G.NotCst
   | G.NotCst, _any ->
       G.NotCst
@@ -113,9 +134,14 @@ let refine c1 c2 =
   | G.NotCst, c ->
       c
   | G.Lit _, _
-  | G.Cst _, G.Cst _ ->
+  | G.Cst _, G.Cst _
+  | G.Sym _, G.Sym _ ->
       c1
+  | G.Cst _, G.Sym _ -> c1
   | G.Cst _, G.Lit _ -> c2
+  | G.Sym _, G.Lit _
+  | G.Sym _, G.Cst _ ->
+      c2
 
 let refine_constness_ref c_ref c' =
   match !c_ref with
@@ -262,6 +288,26 @@ and eval_concat env args =
          | (G.Lit _ | G.Cst _), G.Cst G.Cstr -> G.Cst G.Cstr
          | _____else_____ -> G.NotCst)
        (G.Lit (literal_of_string ""))
+
+let rec is_ok_sym_expr expr =
+  match expr.G.e with
+  | G.N _ -> true
+  | G.DotAccess (e, _, FN _) -> is_ok_sym_expr e
+  | G.Call (e, (_, args, _)) ->
+      is_ok_sym_expr e && List.for_all is_ok_sym_arg args
+  | _ -> false
+
+and is_ok_sym_arg arg =
+  match arg with
+  | G.Arg e -> is_ok_sym_expr e
+  | G.ArgKwd (_, e) -> is_ok_sym_expr e
+  | G.ArgType _ -> true
+  | G.OtherArg _ -> false
+
+let eval env exp =
+  match eval env exp with
+  | G.NotCst when is_ok_sym_expr exp.eorig -> G.Sym exp.eorig
+  | c -> c
 
 (*****************************************************************************)
 (* Transfer *)

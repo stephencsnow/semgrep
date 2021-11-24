@@ -407,6 +407,9 @@ let (mk_visitor : visitor_in -> visitor_out) =
     | Cst v1 ->
         let v1 = map_const_type v1 in
         Cst v1
+    | Sym v1 ->
+        let v1 = map_expr v1 in
+        Sym v1
     | NotCst -> NotCst
   and map_container_operator x = x
   and map_special x =
