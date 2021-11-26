@@ -344,6 +344,7 @@ def generate_file_pairs(
     target: Path,
     config: Path,
     ignore_todo: bool,
+    ignore_paths: bool,
     strict: bool,
     json_output: bool,
     save_test_output_tar: bool = True,
@@ -362,6 +363,7 @@ def generate_file_pairs(
         no_rewrite_rule_ids=True,
         strict=strict,
         optimizations=optimizations,
+        ignore_paths=ignore_paths,
     )
     with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
         results = pool.starmap(invoke_semgrep_fn, config_with_tests)
@@ -477,6 +479,7 @@ def test_main(
     target: Sequence[str],
     config: Optional[Sequence[str]],
     test_ignore_todo: bool,
+    test_ignore_paths: bool,
     strict: bool,
     json: bool,
     save_test_output_tar: bool,
@@ -499,6 +502,7 @@ def test_main(
         target=target_path,
         config=config_path,
         ignore_todo=test_ignore_todo,
+        ignore_paths=test_ignore_paths,
         strict=strict,
         json_output=json,
         save_test_output_tar=save_test_output_tar,

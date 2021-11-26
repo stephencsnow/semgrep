@@ -83,6 +83,7 @@ class TargetManager:
     respect_git_ignore: bool
     output_handler: OutputHandler
     skip_unknown_extensions: bool
+    ignore_paths: bool
 
     _filtered_targets: Dict[Language, FrozenSet[Path]] = attr.ib(factory=dict)
 
@@ -403,7 +404,8 @@ class TargetManager:
         filter is then applied.
         """
         targets = self.filtered_files(lang)
-        targets = self.filter_includes(targets, includes)
-        targets = self.filter_excludes(targets, excludes)
+        if not self.ignore_paths:
+            targets = self.filter_includes(targets, includes)
+            targets = self.filter_excludes(targets, excludes)
         targets = self.filter_by_size(targets, self.max_target_bytes)
         return targets

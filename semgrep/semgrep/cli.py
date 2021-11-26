@@ -396,6 +396,12 @@ CONTEXT_SETTINGS = {"max_content_width": 90}
     help="If --test-ignore-todo, ignores rules marked as '#todoruleid:' in test files.",
 )
 @optgroup.option(
+    "--test-ignore-paths/--no-test-ignore-paths",
+    is_flag=True,
+    default=False,
+    help="If --test-ignore-paths, ignores 'path' filters in rules.",
+)
+@optgroup.option(
     "--dump-ast/--no-dump-ast",
     is_flag=True,
     default=False,
@@ -499,6 +505,7 @@ def cli(
     target: Tuple[str, ...],
     test: bool,
     test_ignore_todo: bool,
+    test_ignore_paths: bool,
     time: bool,
     timeout: int,
     timeout_threshold: int,
@@ -623,6 +630,7 @@ def cli(
             target=target_sequence,
             config=config,
             test_ignore_todo=test_ignore_todo,
+            test_ignore_paths=test_ignore_paths,
             strict=strict,
             json=json,
             save_test_output_tar=save_test_output_tar,

@@ -110,6 +110,7 @@ def main(
     dryrun: bool = False,
     disable_nosem: bool = False,
     no_git_ignore: bool = False,
+    ignore_paths: bool = False,
     timeout: int = DEFAULT_TIMEOUT,
     max_memory: int = 0,
     max_target_bytes: int = 0,
@@ -184,6 +185,7 @@ def main(
         respect_git_ignore=respect_git_ignore,
         output_handler=output_handler,
         skip_unknown_extensions=skip_unknown_extensions,
+        ignore_paths=ignore_paths,
     )
 
     join_rules, rest_of_the_rules = partition(
